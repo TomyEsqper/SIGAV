@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "0POtnQKn9bn+kQeTHxX1SYaaRNzesSKr1aShnTTd51M=",
+  "Source": "Sigav.Api",
+  "BasePath": "_content/Sigav.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

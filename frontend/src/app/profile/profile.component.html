@@ -1,0 +1,15 @@
+<div class="profile-container">
+  <div class="profile-card">
+    <h2>Perfil del Usuario</h2>
+    <p>¡Has iniciado sesión correctamente!</p>
+    
+    <div class="profile-info">
+      <p><strong>Estado:</strong> Autenticado</p>
+      <p><strong>Token:</strong> {{ authService.getToken()?.substring(0, 20) }}...</p>
+    </div>
+
+    <button class="btn-secondary" (click)="logout()">
+      Cerrar Sesión
+    </button>
+  </div>
+</div>

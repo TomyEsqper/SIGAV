@@ -1,0 +1,139 @@
+<div class="busetas-container">
+  <div class="header">
+    <h1>Gestión de Busetas</h1>
+    <button 
+      mat-raised-button 
+      color="primary" 
+      (click)="nuevaBuseta()"
+      *ngIf="isAdmin()">
+      <mat-icon>add</mat-icon>
+      Nueva Buseta
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [(ngModel)]="estadoFiltro" (selectionChange)="aplicarFiltros()">
+        <mat-option value="">Todos</mat-option>
+        <mat-option *ngFor="let estado of estados" [value]="estado">
+          {{ estado }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Buscar por placa</mat-label>
+      <input matInput [(ngModel)]="busqueda" (keyup.enter)="aplicarFiltros()" placeholder="ABC123">
+    </mat-form-field>
+
+    <button mat-button (click)="aplicarFiltros()">
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+
+    <button mat-button (click)="limpiarFiltros()">
+      <mat-icon>clear</mat-icon>
+      Limpiar
+    </button>
+  </div>
+
+  <!-- Tabla de busetas -->
+  <div class="table-container">
+    <table mat-table [dataSource]="busetas" class="busetas-table">
+      <!-- Placa -->
+      <ng-container matColumnDef="placa">
+        <th mat-header-cell *matHeaderCellDef>Placa</th>
+        <td mat-cell *matCellDef="let buseta">{{ buseta.placa }}</td>
+      </ng-container>
+
+      <!-- Modelo -->
+      <ng-container matColumnDef="modelo">
+        <th mat-header-cell *matHeaderCellDef>Modelo</th>
+        <td mat-cell *matCellDef="let buseta">{{ buseta.modelo }}</td>
+      </ng-container>
+
+      <!-- Capacidad -->
+      <ng-container matColumnDef="capacidad">
+        <th mat-header-cell *matHeaderCellDef>Capacidad</th>
+        <td mat-cell *matCellDef="let buseta">{{ buseta.capacidad }} pasajeros</td>
+      </ng-container>
+
+      <!-- Agencia -->
+      <ng-container matColumnDef="agencia">
+        <th mat-header-cell *matHeaderCellDef>Agencia</th>
+        <td mat-cell *matCellDef="let buseta">{{ buseta.agencia }}</td>
+      </ng-container>
+
+      <!-- Estado -->
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let buseta">
+          <mat-chip [color]="getEstadoColor(buseta.estado)" selected>
+            {{ buseta.estado }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Acciones -->
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let buseta">
+          <button 
+            mat-icon-button 
+            color="primary" 
+            (click)="editarBuseta(buseta)"
+            *ngIf="isAdmin()"
+            matTooltip="Editar">
+            <mat-icon>edit</mat-icon>
+          </button>
+
+          <button 
+            mat-icon-button 
+            [matMenuTriggerFor]="estadoMenu"
+            color="accent"
+            *ngIf="isAdmin()"
+            matTooltip="Cambiar estado">
+            <mat-icon>swap_horiz</mat-icon>
+          </button>
+
+          <mat-menu #estadoMenu="matMenu">
+            <button 
+              mat-menu-item 
+              *ngFor="let estado of estados"
+              (click)="cambiarEstado(buseta, estado)"
+              [disabled]="estado === buseta.estado">
+              <mat-icon>directions_bus</mat-icon>
+              {{ estado }}
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <!-- Paginador -->
+    <mat-paginator 
+      [length]="total"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="[10, 20, 50]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+
+    <!-- Loading -->
+    <div class="loading" *ngIf="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Cargando busetas...</p>
+    </div>
+
+    <!-- Sin resultados -->
+    <div class="no-results" *ngIf="!loading && busetas.length === 0">
+      <mat-icon>directions_bus</mat-icon>
+      <p>No se encontraron busetas</p>
+    </div>
+  </div>
+</div>

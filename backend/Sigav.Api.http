@@ -1,0 +1,6 @@
+@Sigav.Api_HostAddress = http://localhost:5124
+
+GET {{Sigav.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

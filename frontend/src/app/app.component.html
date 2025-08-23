@@ -1,0 +1,31 @@
+<mat-toolbar color="primary">
+  <span>SIGAV - Sistema de Alistamiento de Busetas</span>
+  
+  <span class="spacer"></span>
+  
+  <ng-container *ngIf="authService.isAuthenticated(); else loginButton">
+    <button mat-button routerLink="/busetas">Busetas</button>
+    <button mat-button routerLink="/checklists/plantillas" *ngIf="authService.isAdmin()">Plantillas</button>
+    <button mat-button routerLink="/checklists/ejecucion/nueva" *ngIf="authService.isInspector()">Nueva Ejecución</button>
+    <button mat-button routerLink="/historial">Historial</button>
+    
+    <button mat-icon-button [matMenuTriggerFor]="userMenu">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Cerrar Sesión</span>
+      </button>
+    </mat-menu>
+  </ng-container>
+  
+  <ng-template #loginButton>
+    <button mat-button routerLink="/login">Iniciar Sesión</button>
+  </ng-template>
+</mat-toolbar>
+
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>
