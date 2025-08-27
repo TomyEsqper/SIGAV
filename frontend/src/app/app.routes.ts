@@ -1,18 +1,21 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { roleGuard } from './auth/role.guard';
+import { LoginComponent } from './auth/login/login.component';
+import { BusetasComponent } from './busetas/busetas.component';
+import { ProfileComponent } from './profile/profile.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
-  { path: 'login', component: () => import('./auth/login/login.component').then(m => m.LoginComponent) },
+  { path: 'login', component: LoginComponent },
   
   {
     path: 'busetas',
     canActivate: [authGuard],
     children: [
-      { path: '', component: () => import('./busetas/busetas.component').then(m => m.BusetasComponent) },
-      { path: 'nueva', component: () => import('./busetas/buseta-form/buseta-form.component').then(m => m.BusetaFormComponent), canActivate: [() => roleGuard(['Admin'])] },
-      { path: ':id/editar', component: () => import('./busetas/buseta-form/buseta-form.component').then(m => m.BusetaFormComponent), canActivate: [() => roleGuard(['Admin'])] }
+      { path: '', component: BusetasComponent },
+      { path: 'nueva', component: BusetasComponent, canActivate: [() => roleGuard(['Admin'])] },
+      { path: ':id/editar', component: BusetasComponent, canActivate: [() => roleGuard(['Admin'])] }
     ]
   },
   
@@ -20,15 +23,15 @@ export const routes: Routes = [
     path: 'checklists',
     canActivate: [authGuard],
     children: [
-      { path: 'plantillas', component: () => import('./checklists/plantillas/plantillas.component').then(m => m.PlantillasComponent), canActivate: [() => roleGuard(['Admin'])] },
-      { path: 'ejecucion/nueva', component: () => import('./checklists/ejecucion/ejecucion.component').then(m => m.EjecucionComponent), canActivate: [() => roleGuard(['Admin', 'Inspector'])] }
+      { path: 'plantillas', component: ProfileComponent, canActivate: [() => roleGuard(['Admin'])] },
+      { path: 'ejecucion/nueva', component: ProfileComponent, canActivate: [() => roleGuard(['Admin', 'Inspector'])] }
     ]
   },
   
   {
     path: 'historial',
     canActivate: [authGuard],
-    component: () => import('./historial/historial.component').then(m => m.HistorialComponent)
+    component: ProfileComponent
   },
   
   { path: '**', redirectTo: '/login' }

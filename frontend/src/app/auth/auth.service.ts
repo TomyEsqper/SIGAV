@@ -51,7 +51,7 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentUserSubject.value !== null;
+    return !!this.getToken();
   }
 
   getCurrentUser(): Usuario | null {

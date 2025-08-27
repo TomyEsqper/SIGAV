@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { Buseta, BusetaListResponse } from '../models';
@@ -30,7 +31,8 @@ import { AuthService } from '../auth/auth.service';
     MatSelectModule,
     MatPaginatorModule,
     MatCardModule,
-    MatChipsModule
+    MatChipsModule,
+    MatMenuModule
   ],
   template: `
     <mat-card>
@@ -201,7 +203,7 @@ export class BusetasComponent implements OnInit {
 
   constructor(
     private busetasService: BusetasService,
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router,
     private snackBar: MatSnackBar
   ) {}
