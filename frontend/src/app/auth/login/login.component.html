@@ -1,50 +1,82 @@
 <div class="login-container">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>SIGAV - Iniciar Sesión</mat-card-title>
-      <mat-card-subtitle>Sistema de Alistamiento de Busetas</mat-card-subtitle>
-    </mat-card-header>
-    
-    <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" type="email" placeholder="admin@sigav.local">
-          <mat-error *ngIf="loginForm.get('email')?.hasError('required')">
-            El email es requerido
-          </mat-error>
-          <mat-error *ngIf="loginForm.get('email')?.hasError('email')">
-            Formato de email inválido
-          </mat-error>
-        </mat-form-field>
-        
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Contraseña</mat-label>
-          <input matInput formControlName="password" type="password" placeholder="Admin_123!">
-          <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
-            La contraseña es requerida
-          </mat-error>
-        </mat-form-field>
-        
-        <button 
-          mat-raised-button 
-          color="primary" 
-          type="submit" 
-          class="full-width"
-          [disabled]="loginForm.invalid || loading">
-          <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
-          <span *ngIf="!loading">Iniciar Sesión</span>
-        </button>
-      </form>
-    </mat-card-content>
-    
-    <mat-card-footer>
-      <p class="demo-credentials">
-        <strong>Credenciales de Demo:</strong><br>
-        Admin: admin@sigav.local / Admin_123!<br>
-        Inspector: inspector@sigav.local / Inspector_123!<br>
-        Mecánico: mecanico@sigav.local / Mecanico_123!
+  <!-- Left Section - Branding -->
+  <div class="branding-section">
+    <div class="branding-content">
+      <!-- Logo -->
+      <div class="logo">🚌</div>
+      
+      <!-- Main Heading -->
+      <h1 class="welcome-title">
+        ¡Bienvenido a<br>
+        SIGAV! 👋
+      </h1>
+      
+      <!-- Description -->
+      <p class="tagline">
+        Sistema de Alistamiento de Busetas. Optimiza el mantenimiento y control de tu flota vehicular de manera eficiente y profesional.
       </p>
-    </mat-card-footer>
-  </mat-card>
+      
+      <!-- Copyright -->
+      <div class="copyright">
+        © 2025 SIGAV. Todos los derechos reservados.
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Section - Login Form -->
+  <div class="login-section">
+    <div class="login-content">
+      <!-- Header -->
+      <div class="login-header">
+        <h2 class="app-name">SIGAV</h2>
+        <h3 class="welcome-back">¡Bienvenido de vuelta!</h3>
+        <p class="create-account">
+          ¿No tienes una cuenta? <a href="#" class="create-account-link">Crear cuenta nueva</a>, ¡es GRATIS! Toma menos de un minuto.
+        </p>
+      </div>
+
+      <!-- Login Form -->
+      <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <!-- Email Field -->
+        <div class="form-group">
+          <input 
+            type="email" 
+            class="form-input" 
+            formControlName="email"
+            placeholder="tu@email.com"
+            [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+          >
+          <div class="error-message" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+            <span *ngIf="loginForm.get('email')?.hasError('required')">Email es requerido</span>
+            <span *ngIf="loginForm.get('email')?.hasError('email')">Formato de email inválido</span>
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="form-group">
+          <input 
+            [type]="showPassword ? 'text' : 'password'" 
+            class="form-input" 
+            formControlName="password"
+            placeholder="Contraseña"
+            [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+          >
+          <div class="error-message" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+            <span *ngIf="loginForm.get('password')?.hasError('required')">Contraseña es requerida</span>
+          </div>
+        </div>
+
+        <!-- Login Button -->
+        <button type="submit" class="login-button" [disabled]="loading">
+          <span *ngIf="!loading">Iniciar Sesión</span>
+          <span *ngIf="loading" class="loading-spinner">⏳</span>
+        </button>
+
+        <!-- Forgot Password -->
+        <div class="forgot-password">
+          ¿Olvidaste tu contraseña? <a href="#" class="forgot-link">Haz clic aquí</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
