@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  frontend-dev:
+    image: node:22-alpine
+    container_name: sigav-frontend-dev
+    working_dir: /app
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: >
+      sh -c "npm install && npm start -- --host 0.0.0.0 --port 4200"
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+    networks:
+      - sigav-dev-network
+
+  # Backend con Hot Reload
+  api-dev:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: sigav-api-dev
+    working_dir: /src
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/src
+    command: >
+      sh -c "dotnet restore Sigav.Api/Sigav.Api.csproj && 
+             dotnet run --project Sigav.Api/Sigav.Api.csproj --watch"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=sigav;Username=sigav_user;Password=sigav_password
+      - Redis__ConnectionString=redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sigav-dev-network
+
+  # PostgreSQL con persistencia
+  postgres:
+    image: postgres:17
+    container_name: sigav-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=sigav
+      - POSTGRES_USER=sigav_user
+      - POSTGRES_PASSWORD=sigav_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigav_user -d sigav"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sigav-dev-network
+
+  # Redis con persistencia
+  redis:
+    image: redis:8
+    container_name: sigav-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sigav-dev-network
+
+  # pgAdmin para administrar la DB
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: sigav-pgadmin-dev
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@sigav.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    networks:
+      - sigav-dev-network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  pgadmin_dev_data:
+
+networks:
+  sigav-dev-network:
+    driver: bridge
