@@ -13,6 +13,29 @@ namespace Sigav.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AuthLogs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Tenant = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    UsernameAttempted = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IpAddress = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
+                    UserAgent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Result = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Jti = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaActualizacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuthLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Empresas",
                 columns: table => new
                 {
@@ -148,6 +171,9 @@ namespace Sigav.Api.Migrations
                     Salario = table.Column<decimal>(type: "numeric", nullable: true),
                     Rol = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     EmpresaId = table.Column<int>(type: "integer", nullable: false),
+                    FailedAttempts = table.Column<int>(type: "integer", nullable: false),
+                    LockedUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     FechaActualizacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Activo = table.Column<bool>(type: "boolean", nullable: false)
@@ -322,9 +348,69 @@ namespace Sigav.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_IpAddress_Timestamp",
+                table: "AuthLogs",
+                columns: new[] { "IpAddress", "Timestamp" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_Result",
+                table: "AuthLogs",
+                column: "Result");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_Tenant",
+                table: "AuthLogs",
+                column: "Tenant");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_Tenant_Result",
+                table: "AuthLogs",
+                columns: new[] { "Tenant", "Result" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_Tenant_Timestamp",
+                table: "AuthLogs",
+                columns: new[] { "Tenant", "Timestamp" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_Timestamp",
+                table: "AuthLogs",
+                column: "Timestamp");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthLogs_UserId",
+                table: "AuthLogs",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Busetas_EmpresaId",
                 table: "Busetas",
                 column: "EmpresaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_EmpresaId_Activo",
+                table: "Busetas",
+                columns: new[] { "EmpresaId", "Activo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_EmpresaId_Estado_Activo",
+                table: "Busetas",
+                columns: new[] { "EmpresaId", "Estado", "Activo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_Estado",
+                table: "Busetas",
+                column: "Estado");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_Estado_Activo",
+                table: "Busetas",
+                columns: new[] { "Estado", "Activo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_Marca",
+                table: "Busetas",
+                column: "Marca");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Busetas_Placa",
@@ -333,9 +419,24 @@ namespace Sigav.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Busetas_ProximaRevision",
+                table: "Busetas",
+                column: "ProximaRevision");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Busetas_UltimaRevision",
+                table: "Busetas",
+                column: "UltimaRevision");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChecklistEjecuciones_BusetaId",
                 table: "ChecklistEjecuciones",
                 column: "BusetaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistEjecuciones_BusetaId_FechaInicio",
+                table: "ChecklistEjecuciones",
+                columns: new[] { "BusetaId", "FechaInicio" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChecklistEjecuciones_ChecklistPlantillaId",
@@ -343,9 +444,29 @@ namespace Sigav.Api.Migrations
                 column: "ChecklistPlantillaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChecklistEjecuciones_Estado",
+                table: "ChecklistEjecuciones",
+                column: "Estado");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistEjecuciones_Estado_FechaInicio",
+                table: "ChecklistEjecuciones",
+                columns: new[] { "Estado", "FechaInicio" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistEjecuciones_FechaInicio",
+                table: "ChecklistEjecuciones",
+                column: "FechaInicio");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChecklistEjecuciones_InspectorId",
                 table: "ChecklistEjecuciones",
                 column: "InspectorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistEjecuciones_InspectorId_FechaInicio",
+                table: "ChecklistEjecuciones",
+                columns: new[] { "InspectorId", "FechaInicio" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChecklistItemPlantillas_ChecklistPlantillaId",
@@ -353,9 +474,19 @@ namespace Sigav.Api.Migrations
                 column: "ChecklistPlantillaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChecklistItemPlantillas_ChecklistPlantillaId_Orden",
+                table: "ChecklistItemPlantillas",
+                columns: new[] { "ChecklistPlantillaId", "Orden" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChecklistItemResultados_ChecklistEjecucionId",
                 table: "ChecklistItemResultados",
                 column: "ChecklistEjecucionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistItemResultados_ChecklistEjecucionId_Resultado",
+                table: "ChecklistItemResultados",
+                columns: new[] { "ChecklistEjecucionId", "Resultado" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChecklistItemResultados_ChecklistItemPlantillaId",
@@ -363,14 +494,54 @@ namespace Sigav.Api.Migrations
                 column: "ChecklistItemPlantillaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChecklistItemResultados_FechaVerificacion",
+                table: "ChecklistItemResultados",
+                column: "FechaVerificacion");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistItemResultados_Resultado",
+                table: "ChecklistItemResultados",
+                column: "Resultado");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChecklistPlantillas_EmpresaId",
                 table: "ChecklistPlantillas",
                 column: "EmpresaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChecklistPlantillas_EmpresaId_Activa",
+                table: "ChecklistPlantillas",
+                columns: new[] { "EmpresaId", "Activa" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistPlantillas_EmpresaId_Tipo",
+                table: "ChecklistPlantillas",
+                columns: new[] { "EmpresaId", "Tipo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChecklistPlantillas_Tipo",
+                table: "ChecklistPlantillas",
+                column: "Tipo");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomFields_EmpresaId",
                 table: "CustomFields",
                 column: "EmpresaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFields_EmpresaId_Entidad",
+                table: "CustomFields",
+                columns: new[] { "EmpresaId", "Entidad" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFields_EmpresaId_Entidad_Activo",
+                table: "CustomFields",
+                columns: new[] { "EmpresaId", "Entidad", "Activo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFields_Entidad",
+                table: "CustomFields",
+                column: "Entidad");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CustomFieldValues_BusetaId",
@@ -393,9 +564,39 @@ namespace Sigav.Api.Migrations
                 column: "CustomFieldId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CustomFieldValues_CustomFieldId_Entidad_EntidadId",
+                table: "CustomFieldValues",
+                columns: new[] { "CustomFieldId", "Entidad", "EntidadId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFieldValues_Entidad",
+                table: "CustomFieldValues",
+                column: "Entidad");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFieldValues_Entidad_EntidadId",
+                table: "CustomFieldValues",
+                columns: new[] { "Entidad", "EntidadId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomFieldValues_EntidadId",
+                table: "CustomFieldValues",
+                column: "EntidadId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomFieldValues_UsuarioId",
                 table: "CustomFieldValues",
                 column: "UsuarioId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Empresas_Activo",
+                table: "Empresas",
+                column: "Activo");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Empresas_Activo_FechaCreacion",
+                table: "Empresas",
+                columns: new[] { "Activo", "FechaCreacion" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Empresas_Nit",
@@ -413,11 +614,29 @@ namespace Sigav.Api.Migrations
                 name: "IX_Usuarios_EmpresaId",
                 table: "Usuarios",
                 column: "EmpresaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_EmpresaId_Activo",
+                table: "Usuarios",
+                columns: new[] { "EmpresaId", "Activo" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_Rol",
+                table: "Usuarios",
+                column: "Rol");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_Rol_Activo",
+                table: "Usuarios",
+                columns: new[] { "Rol", "Activo" });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AuthLogs");
+
             migrationBuilder.DropTable(
                 name: "ChecklistItemResultados");
 

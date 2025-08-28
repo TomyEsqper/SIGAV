@@ -1,0 +1,42 @@
+# Dockerfile para desarrollo del backend .NET
+# Usamos .NET 8 SDK para desarrollo
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine
+
+# Establecemos el directorio de trabajo
+WORKDIR /app
+
+# Instalamos herramientas necesarias
+RUN apk add --no-cache icu-libs
+
+# Copiamos los archivos de proyecto primero (para aprovechar la caché de Docker)
+COPY *.sln ./
+COPY Sigav.Api/*.csproj ./Sigav.Api/
+COPY Sigav.Application/*.csproj ./Sigav.Application/
+COPY Sigav.Domain/*.csproj ./Sigav.Domain/
+COPY Sigav.Infrastructure/*.csproj ./Sigav.Infrastructure/
+COPY Sigav.Shared/*.csproj ./Sigav.Shared/
+
+# Restauramos las dependencias solo para los proyectos que existen
+RUN dotnet restore --verbosity quiet --ignore-failed-sources
+
+# Copiamos el resto del código fuente
+COPY . .
+
+# Compilamos la aplicación
+RUN dotnet build Sigav.Api
+
+# Exponemos el puerto 5000 para la API
+EXPOSE 5000
+
+# Variables de entorno para desarrollo
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:5000
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+ENV DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER=1
+ENV DOTNET_WATCH_SUPPRESS_HOT_RELOAD=0
+
+# Comando para desarrollo con hot-reload
+# dotnet watch run ejecuta la aplicación con hot-reload habilitado
+# --urls http://+:5000 especifica la URL de escucha
+# --environment Development establece el entorno de desarrollo
+CMD ["dotnet", "run", "--project", "Sigav.Api", "--urls", "http://+:5000", "--environment", "Development"]

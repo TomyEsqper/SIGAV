@@ -27,8 +27,9 @@ export class LoginComponent {
     private snackBar: MatSnackBar
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
+      tenant: ['', [Validators.required, Validators.minLength(3)]],
+      usernameOrEmail: ['', [Validators.required, Validators.minLength(3)]],
+      password: ['', [Validators.required, Validators.minLength(8)]]
     });
   }
 
@@ -46,10 +47,18 @@ export class LoginComponent {
   onSubmit() {
     if (this.loginForm.valid) {
       this.loading = true;
-      const { email, password } = this.loginForm.value;
       
-      this.authService.login(email, password).subscribe({
-        next: () => {
+      // Normalizar inputs
+      const formValue = this.loginForm.value;
+      const request = {
+        tenant: formValue.tenant.trim().toLowerCase(),
+        usernameOrEmail: formValue.usernameOrEmail.trim(),
+        password: formValue.password
+      };
+      
+      this.authService.login(request).subscribe({
+        next: (response) => {
+          this.loading = false;
           this.router.navigate(['/busetas']);
           this.snackBar.open('Sesión iniciada correctamente', 'Cerrar', {
             duration: 3000
@@ -57,11 +66,15 @@ export class LoginComponent {
         },
         error: (error) => {
           this.loading = false;
-          this.snackBar.open(
-            error.error?.message || 'Error al iniciar sesión', 
-            'Cerrar', 
-            { duration: 5000 }
-          );
+          let errorMessage = 'Error al iniciar sesión';
+          
+          if (error.status === 423) {
+            errorMessage = 'Cuenta bloqueada temporalmente';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+          
+          this.snackBar.open(errorMessage, 'Cerrar', { duration: 5000 });
         }
       });
     } else {

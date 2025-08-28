@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Sigav.Api.Data;
 using Sigav.Domain;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,14 +16,38 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<SigavDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+if (!string.IsNullOrEmpty(jwtKey))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            };
+        });
+}
+
 // CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowSigav", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:4200", "https://app.sigav.com", "https://staging.sigav.com")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -37,7 +64,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("AllowSigav");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -55,14 +83,22 @@ using (var scope = app.Services.CreateScope())
         ctx.Empresas.Add(empresa);
         await ctx.SaveChangesAsync();
 
+        // Crear hash de contraseña para el usuario demo
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var passwordBytes = System.Text.Encoding.UTF8.GetBytes("admin123");
+        var hashBytes = sha256.ComputeHash(passwordBytes);
+        var passwordHash = Convert.ToBase64String(hashBytes);
+
         var usuario = new Usuario
         {
             Nombre = "Admin",
             Apellido = "Demo",
             Email = "admin@demo.local",
-            PasswordHash = "",
+            PasswordHash = passwordHash,
             Rol = "Admin",
-            EmpresaId = empresa.Id
+            EmpresaId = empresa.Id,
+            FailedAttempts = 0,
+            LastLoginAt = null
         };
         ctx.Usuarios.Add(usuario);
 

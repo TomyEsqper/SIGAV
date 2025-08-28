@@ -12,7 +12,7 @@ using Sigav.Api.Data;
 namespace Sigav.Api.Migrations
 {
     [DbContext(typeof(SigavDbContext))]
-    [Migration("20250826143557_InitialCreate")]
+    [Migration("20250828233611_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,6 +24,77 @@ namespace Sigav.Api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Sigav.Domain.AuthLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("Jti")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Tenant")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UsernameAttempted")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Result");
+
+                    b.HasIndex("Tenant");
+
+                    b.HasIndex("Timestamp");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("IpAddress", "Timestamp");
+
+                    b.HasIndex("Tenant", "Result");
+
+                    b.HasIndex("Tenant", "Timestamp");
+
+                    b.ToTable("AuthLogs");
+                });
 
             modelBuilder.Entity("Sigav.Domain.Buseta", b =>
                 {
@@ -107,8 +178,22 @@ namespace Sigav.Api.Migrations
 
                     b.HasIndex("EmpresaId");
 
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("Marca");
+
                     b.HasIndex("Placa")
                         .IsUnique();
+
+                    b.HasIndex("ProximaRevision");
+
+                    b.HasIndex("UltimaRevision");
+
+                    b.HasIndex("EmpresaId", "Activo");
+
+                    b.HasIndex("Estado", "Activo");
+
+                    b.HasIndex("EmpresaId", "Estado", "Activo");
 
                     b.ToTable("Busetas");
                 });
@@ -174,7 +259,17 @@ namespace Sigav.Api.Migrations
 
                     b.HasIndex("ChecklistPlantillaId");
 
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaInicio");
+
                     b.HasIndex("InspectorId");
+
+                    b.HasIndex("BusetaId", "FechaInicio");
+
+                    b.HasIndex("Estado", "FechaInicio");
+
+                    b.HasIndex("InspectorId", "FechaInicio");
 
                     b.ToTable("ChecklistEjecuciones");
                 });
@@ -234,6 +329,8 @@ namespace Sigav.Api.Migrations
 
                     b.HasIndex("ChecklistPlantillaId");
 
+                    b.HasIndex("ChecklistPlantillaId", "Orden");
+
                     b.ToTable("ChecklistItemPlantillas");
                 });
 
@@ -289,6 +386,12 @@ namespace Sigav.Api.Migrations
 
                     b.HasIndex("ChecklistItemPlantillaId");
 
+                    b.HasIndex("FechaVerificacion");
+
+                    b.HasIndex("Resultado");
+
+                    b.HasIndex("ChecklistEjecucionId", "Resultado");
+
                     b.ToTable("ChecklistItemResultados");
                 });
 
@@ -335,6 +438,12 @@ namespace Sigav.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmpresaId");
+
+                    b.HasIndex("Tipo");
+
+                    b.HasIndex("EmpresaId", "Activa");
+
+                    b.HasIndex("EmpresaId", "Tipo");
 
                     b.ToTable("ChecklistPlantillas");
                 });
@@ -391,6 +500,12 @@ namespace Sigav.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmpresaId");
+
+                    b.HasIndex("Entidad");
+
+                    b.HasIndex("EmpresaId", "Entidad");
+
+                    b.HasIndex("EmpresaId", "Entidad", "Activo");
 
                     b.ToTable("CustomFields");
                 });
@@ -450,7 +565,15 @@ namespace Sigav.Api.Migrations
 
                     b.HasIndex("CustomFieldId");
 
+                    b.HasIndex("Entidad");
+
+                    b.HasIndex("EntidadId");
+
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("Entidad", "EntidadId");
+
+                    b.HasIndex("CustomFieldId", "Entidad", "EntidadId");
 
                     b.ToTable("CustomFieldValues");
                 });
@@ -506,8 +629,12 @@ namespace Sigav.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Activo");
+
                     b.HasIndex("Nit")
                         .IsUnique();
+
+                    b.HasIndex("Activo", "FechaCreacion");
 
                     b.ToTable("Empresas");
                 });
@@ -548,6 +675,9 @@ namespace Sigav.Api.Migrations
                     b.Property<int>("EmpresaId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("FechaActualizacion")
                         .HasColumnType("timestamp with time zone");
 
@@ -558,6 +688,12 @@ namespace Sigav.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LockedUntil")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Nombre")
@@ -592,6 +728,12 @@ namespace Sigav.Api.Migrations
                         .IsUnique();
 
                     b.HasIndex("EmpresaId");
+
+                    b.HasIndex("Rol");
+
+                    b.HasIndex("EmpresaId", "Activo");
+
+                    b.HasIndex("Rol", "Activo");
 
                     b.ToTable("Usuarios");
                 });

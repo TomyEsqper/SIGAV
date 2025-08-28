@@ -19,6 +19,7 @@ public class SigavDbContext : DbContext
     public DbSet<ChecklistItemPlantilla> ChecklistItemPlantillas { get; set; }
     public DbSet<ChecklistEjecucion> ChecklistEjecuciones { get; set; }
     public DbSet<ChecklistItemResultado> ChecklistItemResultados { get; set; }
+    public DbSet<AuthLog> AuthLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -214,6 +215,28 @@ public class SigavDbContext : DbContext
             entity.HasIndex(e => e.Resultado);
             entity.HasIndex(e => e.FechaVerificacion);
             entity.HasIndex(e => new { e.ChecklistEjecucionId, e.Resultado });
+        });
+
+        // Configuración de AuthLog
+        modelBuilder.Entity<AuthLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Tenant).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.UsernameAttempted).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+            entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Result).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.Jti).HasMaxLength(100);
+            
+            // Índices para auditoría y análisis
+            entity.HasIndex(e => e.Tenant);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.Result);
+            entity.HasIndex(e => new { e.Tenant, e.Timestamp });
+            entity.HasIndex(e => new { e.Tenant, e.Result });
+            entity.HasIndex(e => new { e.IpAddress, e.Timestamp });
         });
     }
 

@@ -1,13 +1,21 @@
 export interface LoginRequest {
-  email: string;
+  tenant: string;
+  usernameOrEmail: string;
   password: string;
 }
 
 export interface LoginResponse {
   accessToken: string;
+  expiresIn: number;
   tokenType: string;
-  expiresAt: string;
-  usuario: UsuarioInfo;
+  user: UserInfo;
+  tenant: string;
+}
+
+export interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface UsuarioInfo {
