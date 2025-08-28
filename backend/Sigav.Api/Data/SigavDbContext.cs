@@ -31,6 +31,10 @@ public class SigavDbContext : DbContext
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Nit).HasMaxLength(100);
             entity.HasIndex(e => e.Nit).IsUnique();
+            
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.Activo);
+            entity.HasIndex(e => new { e.Activo, e.FechaCreacion });
         });
 
         // Configuración de Usuario
@@ -45,6 +49,12 @@ public class SigavDbContext : DbContext
                   .WithMany(e => e.Usuarios)
                   .HasForeignKey(e => e.EmpresaId)
                   .OnDelete(DeleteBehavior.Restrict);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.EmpresaId);
+            entity.HasIndex(e => e.Rol);
+            entity.HasIndex(e => new { e.EmpresaId, e.Activo });
+            entity.HasIndex(e => new { e.Rol, e.Activo });
         });
 
         // Configuración de Buseta
@@ -60,6 +70,16 @@ public class SigavDbContext : DbContext
                   .WithMany(e => e.Busetas)
                   .HasForeignKey(e => e.EmpresaId)
                   .OnDelete(DeleteBehavior.Restrict);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.EmpresaId);
+            entity.HasIndex(e => e.Estado);
+            entity.HasIndex(e => e.Marca);
+            entity.HasIndex(e => new { e.EmpresaId, e.Activo });
+            entity.HasIndex(e => new { e.Estado, e.Activo });
+            entity.HasIndex(e => new { e.EmpresaId, e.Estado, e.Activo });
+            entity.HasIndex(e => e.UltimaRevision);
+            entity.HasIndex(e => e.ProximaRevision);
         });
 
         // Configuración de CustomField
@@ -74,6 +94,12 @@ public class SigavDbContext : DbContext
                   .WithMany(e => e.CustomFields)
                   .HasForeignKey(e => e.EmpresaId)
                   .OnDelete(DeleteBehavior.Cascade);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.EmpresaId);
+            entity.HasIndex(e => e.Entidad);
+            entity.HasIndex(e => new { e.EmpresaId, e.Entidad });
+            entity.HasIndex(e => new { e.EmpresaId, e.Entidad, e.Activo });
         });
 
         // Configuración de CustomFieldValue
@@ -87,6 +113,13 @@ public class SigavDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.CustomFieldId)
                   .OnDelete(DeleteBehavior.Cascade);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.CustomFieldId);
+            entity.HasIndex(e => e.Entidad);
+            entity.HasIndex(e => e.EntidadId);
+            entity.HasIndex(e => new { e.Entidad, e.EntidadId });
+            entity.HasIndex(e => new { e.CustomFieldId, e.Entidad, e.EntidadId });
         });
 
         // Configuración de ChecklistPlantilla
@@ -100,6 +133,12 @@ public class SigavDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.EmpresaId)
                   .OnDelete(DeleteBehavior.Restrict);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.EmpresaId);
+            entity.HasIndex(e => e.Tipo);
+            entity.HasIndex(e => new { e.EmpresaId, e.Tipo });
+            entity.HasIndex(e => new { e.EmpresaId, e.Activa });
         });
 
         // Configuración de ChecklistItemPlantilla
@@ -114,6 +153,10 @@ public class SigavDbContext : DbContext
                   .WithMany(e => e.Items)
                   .HasForeignKey(e => e.ChecklistPlantillaId)
                   .OnDelete(DeleteBehavior.Cascade);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.ChecklistPlantillaId);
+            entity.HasIndex(e => new { e.ChecklistPlantillaId, e.Orden });
         });
 
         // Configuración de ChecklistEjecucion
@@ -137,6 +180,15 @@ public class SigavDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.InspectorId)
                   .OnDelete(DeleteBehavior.Restrict);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.BusetaId);
+            entity.HasIndex(e => e.InspectorId);
+            entity.HasIndex(e => e.FechaInicio);
+            entity.HasIndex(e => e.Estado);
+            entity.HasIndex(e => new { e.BusetaId, e.FechaInicio });
+            entity.HasIndex(e => new { e.InspectorId, e.FechaInicio });
+            entity.HasIndex(e => new { e.Estado, e.FechaInicio });
         });
 
         // Configuración de ChecklistItemResultado
@@ -155,6 +207,27 @@ public class SigavDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.ChecklistItemPlantillaId)
                   .OnDelete(DeleteBehavior.Restrict);
+                  
+            // Índices adicionales para performance
+            entity.HasIndex(e => e.ChecklistEjecucionId);
+            entity.HasIndex(e => e.ChecklistItemPlantillaId);
+            entity.HasIndex(e => e.Resultado);
+            entity.HasIndex(e => e.FechaVerificacion);
+            entity.HasIndex(e => new { e.ChecklistEjecucionId, e.Resultado });
         });
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        
+        // Configuraciones de performance
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        
+        // Solo habilitar logging sensible en desarrollo
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.EnableSensitiveDataLogging(false);
+        }
     }
 }

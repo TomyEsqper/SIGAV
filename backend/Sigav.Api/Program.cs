@@ -1,94 +1,47 @@
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 using Sigav.Api.Data;
 using Sigav.Domain;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .CreateLogger();
-
-builder.Host.UseSerilog();
-
-// Auth (JWT)
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection.GetValue<string>("Key") ?? "dev-secret-key-please-change";
-var jwtIssuer = jwtSection.GetValue<string>("Issuer") ?? "sigav";
-var jwtAudience = jwtSection.GetValue<string>("Audience") ?? "sigav-clients";
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-
-builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.RequireHttpsMetadata = false;
-        options.SaveToken = true;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = signingKey,
-            ClockSkew = TimeSpan.FromMinutes(2)
-        };
-    });
-
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("Admin", p => p.RequireRole("Admin"));
-    options.AddPolicy("Inspector", p => p.RequireRole("Inspector"));
-    options.AddPolicy("Mecanico", p => p.RequireRole("Mecanico"));
-});
-
-// Services
+// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Database
 builder.Services.AddDbContext<SigavDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// HealthChecks
-builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"), name: "postgres")
-    .AddRedis(builder.Configuration.GetSection("Redis").GetValue<string>("ConnectionString"), name: "redis");
-
-// CORS (ajuste simple por entorno)
-var allowAll = builder.Configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Development";
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Default", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        if (allowAll)
-        {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-        }
-        else
-        {
-            policy.WithOrigins("http://localhost:4200").AllowAnyMethod().AllowAnyHeader();
-        }
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
+// Health Checks
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseHttpsRedirection();
+app.UseCors("AllowAll");
+app.UseAuthorization();
+
+app.MapControllers();
+app.MapHealthChecks("/health");
 
 // DB migrate + seed mínimo
 using (var scope = app.Services.CreateScope())
@@ -119,25 +72,12 @@ using (var scope = app.Services.CreateScope())
             Tipo = "Select",
             Opciones = "Norte|Sur|Este|Oeste",
             Entidad = "Buseta",
-            EmpresaId = empresa.Id,
-            Requerido = true,
-            Orden = 1
+            EmpresaId = empresa.Id
         };
         ctx.CustomFields.Add(campo);
 
         await ctx.SaveChangesAsync();
     }
 }
-
-app.UseHttpsRedirection();
-app.UseCors("Default");
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Health endpoints
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/ready");
-
-app.MapControllers();
 
 app.Run();

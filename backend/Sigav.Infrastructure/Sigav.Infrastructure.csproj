@@ -2,7 +2,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sigav.Domain\Sigav.Domain.csproj" />
-    <ProjectReference Include="..\Sigav.Application\Sigav.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
   </ItemGroup>
 
   <PropertyGroup>
