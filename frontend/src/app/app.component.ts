@@ -28,7 +28,7 @@ import { Router } from '@angular/router';
       
       <button mat-button [matMenuTriggerFor]="menu">
         <mat-icon>account_circle</mat-icon>
-        {{ authService.getCurrentUser()?.nombre }}
+        {{ authService.getCurrentUser()?.name }}
       </button>
       
       <mat-menu #menu="matMenu">

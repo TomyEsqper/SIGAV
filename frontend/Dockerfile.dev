@@ -1,0 +1,28 @@
+# Dockerfile para desarrollo del frontend Angular
+# Usamos Node.js 20 como base para Angular 20
+FROM node:20-alpine
+
+# Establecemos el directorio de trabajo
+WORKDIR /app
+
+# Instalamos Angular CLI globalmente
+RUN npm install -g @angular/cli@20
+
+# Copiamos los archivos de dependencias primero (para aprovechar la caché de Docker)
+COPY package*.json ./
+
+    # Instalamos las dependencias
+    RUN npm ci --legacy-peer-deps
+
+# Copiamos el resto del código fuente
+COPY . .
+
+# Exponemos el puerto 4200 para Angular y 49153 para live-reload
+EXPOSE 4200 49153
+
+# Comando para desarrollo con hot-reload
+# --host 0.0.0.0 permite conexiones desde fuera del contenedor
+# --poll habilita polling para detectar cambios en sistemas de archivos que no soportan inotify
+# --live-reload-port 49153 puerto específico para live-reload
+# --disable-host-check evita problemas de CORS en desarrollo
+CMD ["ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--live-reload-port", "49153", "--disable-host-check"]

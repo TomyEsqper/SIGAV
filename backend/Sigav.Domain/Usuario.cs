@@ -48,6 +48,11 @@ public class Usuario : BaseEntity
     
     public int EmpresaId { get; set; }
     
+    // Campos para autenticación
+    public int FailedAttempts { get; set; } = 0;
+    public DateTime? LockedUntil { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+    
     // Relaciones
     public virtual Empresa Empresa { get; set; } = null!;
     public virtual ICollection<CustomFieldValue> CustomFieldValues { get; set; } = new List<CustomFieldValue>();

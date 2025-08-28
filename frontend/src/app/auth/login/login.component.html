@@ -37,18 +37,35 @@
 
       <!-- Login Form -->
       <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <!-- Email Field -->
+        <!-- Tenant Field -->
         <div class="form-group">
           <input 
-            type="email" 
+            type="text" 
             class="form-input" 
-            formControlName="email"
-            placeholder="tu@email.com"
-            [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            formControlName="tenant"
+            placeholder="Empresa"
+            [class.error]="loginForm.get('tenant')?.invalid && loginForm.get('tenant')?.touched"
+            autocomplete="organization"
           >
-          <div class="error-message" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
-            <span *ngIf="loginForm.get('email')?.hasError('required')">Email es requerido</span>
-            <span *ngIf="loginForm.get('email')?.hasError('email')">Formato de email inválido</span>
+          <div class="error-message" *ngIf="loginForm.get('tenant')?.invalid && loginForm.get('tenant')?.touched">
+            <span *ngIf="loginForm.get('tenant')?.hasError('required')">Empresa es requerida</span>
+            <span *ngIf="loginForm.get('tenant')?.hasError('minlength')">Empresa debe tener al menos 3 caracteres</span>
+          </div>
+        </div>
+
+        <!-- Username/Email Field -->
+        <div class="form-group">
+          <input 
+            type="text" 
+            class="form-input" 
+            formControlName="usernameOrEmail"
+            placeholder="Usuario o Email"
+            [class.error]="loginForm.get('usernameOrEmail')?.invalid && loginForm.get('usernameOrEmail')?.touched"
+            autocomplete="username"
+          >
+          <div class="error-message" *ngIf="loginForm.get('usernameOrEmail')?.invalid && loginForm.get('usernameOrEmail')?.touched">
+            <span *ngIf="loginForm.get('usernameOrEmail')?.hasError('required')">Usuario o Email es requerido</span>
+            <span *ngIf="loginForm.get('usernameOrEmail')?.hasError('minlength')">Usuario debe tener al menos 3 caracteres</span>
           </div>
         </div>
 
@@ -60,10 +77,15 @@
             formControlName="password"
             placeholder="Contraseña"
             [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            autocomplete="current-password"
           >
           <div class="error-message" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
             <span *ngIf="loginForm.get('password')?.hasError('required')">Contraseña es requerida</span>
+            <span *ngIf="loginForm.get('password')?.hasError('minlength')">Contraseña debe tener al menos 8 caracteres</span>
           </div>
+          <button type="button" class="password-toggle" (click)="togglePassword()" [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+          </button>
         </div>
 
         <!-- Login Button -->

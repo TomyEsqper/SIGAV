@@ -1,107 +1,107 @@
 version: '3.8'
 
 services:
-  frontend-dev:
-    image: node:22-alpine
-    container_name: sigav-frontend-dev
-    working_dir: /app
-    ports:
-      - "4200:4200"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: >
-      sh -c "npm install && npm start -- --host 0.0.0.0 --port 4200"
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: sigav-db-dev
     environment:
-      - NODE_ENV=development
-    stdin_open: true
-    tty: true
-    networks:
-      - sigav-dev-network
-
-  # Backend con Hot Reload
-  api-dev:
-    image: mcr.microsoft.com/dotnet/sdk:8.0
-    container_name: sigav-api-dev
-    working_dir: /src
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./backend:/src
-    command: >
-      sh -c "dotnet restore Sigav.Api/Sigav.Api.csproj && 
-             dotnet run --project Sigav.Api/Sigav.Api.csproj --watch"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5000
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=sigav;Username=sigav_user;Password=sigav_password
-      - Redis__ConnectionString=redis:6379
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - sigav-dev-network
-
-  # PostgreSQL con persistencia
-  postgres:
-    image: postgres:17
-    container_name: sigav-postgres-dev
+      POSTGRES_DB: sigav
+      POSTGRES_USER: sigav_user
+      POSTGRES_PASSWORD: sigav_password
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_DB=sigav
-      - POSTGRES_USER=sigav_user
-      - POSTGRES_PASSWORD=sigav_password
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      # Volumen persistente para los datos de la base de datos
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts de inicialización (opcional)
+      - ./backend/scripts:/docker-entrypoint-initdb.d
+    networks:
+      - sigav-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sigav_user -d sigav"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - sigav-dev-network
 
-  # Redis con persistencia
+  # Backend .NET API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: sigav-api-dev
+    ports:
+      - "5000:5000"
+    volumes:
+      # Montamos el código fuente para hot-reload
+      - ./backend:/app
+      # Excluimos carpetas que no necesitan sincronización
+      - /app/bin
+      - /app/obj
+      - /app/node_modules
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER=1
+      - DOTNET_WATCH_SUPPRESS_HOT_RELOAD=0
+      # Variables de conexión a la base de datos
+      - ConnectionStrings__DefaultConnection=Host=db;Database=sigav;Username=sigav_user;Password=sigav_password
+      # Variables de JWT
+      - Jwt__Key=dev-secret-key-please-change-in-production-minimum-256-bits-for-security-this-is-a-very-long-key-to-meet-requirements
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sigav-network
+    restart: unless-stopped
+
+  # Frontend Angular
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: sigav-frontend-dev
+    ports:
+      - "4200:4200"
+      - "49153:49153"  # Puerto para live-reload
+    volumes:
+      # Montamos el código fuente para hot-reload
+      - ./frontend:/app
+      # Excluimos node_modules para usar los del contenedor
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - api
+    networks:
+      - sigav-network
+    restart: unless-stopped
+
+  # Redis (opcional, para caché y sesiones)
   redis:
-    image: redis:8
+    image: redis:7-alpine
     container_name: sigav-redis-dev
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
     volumes:
-      - redis_dev_data:/data
+      - redis_data:/data
+    networks:
+      - sigav-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - sigav-dev-network
 
-  # pgAdmin para administrar la DB
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: sigav-pgadmin-dev
-    ports:
-      - "5050:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@sigav.com
-      - PGADMIN_DEFAULT_PASSWORD=admin123
-      - PGADMIN_CONFIG_SERVER_MODE=False
-    depends_on:
-      - postgres
-    volumes:
-      - pgadmin_dev_data:/var/lib/pgadmin
-    networks:
-      - sigav-dev-network
-
+# Volúmenes persistentes
 volumes:
-  postgres_dev_data:
-  redis_dev_data:
-  pgadmin_dev_data:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
 
+# Red personalizada para comunicación entre servicios
 networks:
-  sigav-dev-network:
+  sigav-network:
     driver: bridge
