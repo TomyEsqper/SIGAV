@@ -17,12 +17,11 @@ COPY package*.json ./
 # Copiamos el resto del código fuente
 COPY . .
 
-# Exponemos el puerto 4200 para Angular y 49153 para live-reload
-EXPOSE 4200 49153
+# Exponemos el puerto 4200 para Angular
+EXPOSE 4200
 
 # Comando para desarrollo con hot-reload
 # --host 0.0.0.0 permite conexiones desde fuera del contenedor
 # --poll habilita polling para detectar cambios en sistemas de archivos que no soportan inotify
-# --live-reload-port 49153 puerto específico para live-reload
 # --disable-host-check evita problemas de CORS en desarrollo
-CMD ["ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--live-reload-port", "49153", "--disable-host-check"]
+CMD ["ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--disable-host-check"]

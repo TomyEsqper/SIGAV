@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Sigav.Api.Data;
+using Sigav.Api.Services;
 using Sigav.Domain;
 using System.Text;
 
@@ -53,6 +54,11 @@ builder.Services.AddCors(options =>
 
 // Health Checks
 builder.Services.AddHealthChecks();
+
+// Security Services
+builder.Services.AddScoped<ISecurityService, SecurityService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
 
 var app = builder.Build();
 

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Sigav.Api.Data;
@@ -11,9 +12,11 @@ using Sigav.Api.Data;
 namespace Sigav.Api.Migrations
 {
     [DbContext(typeof(SigavDbContext))]
-    partial class SigavDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250829002758_AddSecurityFeatures")]
+    partial class AddSecurityFeatures
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -622,8 +625,8 @@ namespace Sigav.Api.Migrations
 
                     b.Property<string>("UserAgent")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("integer");
@@ -850,187 +853,6 @@ namespace Sigav.Api.Migrations
                     b.HasIndex("TipoEvento", "Resultado");
 
                     b.ToTable("LogsSeguridad");
-                });
-
-            modelBuilder.Entity("Sigav.Domain.RecuperacionContrasena", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("CodigoRecuperacion")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("FechaActualizacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("FechaExpiracion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("FechaUso")
-                        .IsRequired()
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Ubicacion")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("Usado")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("UserAgent")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Activo");
-
-                    b.HasIndex("CodigoRecuperacion");
-
-                    b.HasIndex("FechaExpiracion");
-
-                    b.HasIndex("Tipo");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("Usado");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.HasIndex("Activo", "FechaExpiracion");
-
-                    b.HasIndex("CodigoRecuperacion", "Activo");
-
-                    b.HasIndex("Tipo", "Activo");
-
-                    b.HasIndex("Token", "Activo");
-
-                    b.HasIndex("UsuarioId", "Activo");
-
-                    b.ToTable("RecuperacionesContrasena");
-                });
-
-            modelBuilder.Entity("Sigav.Domain.Sesion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Activa")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("DispositivoId")
-                        .HasMaxLength(100)
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("EsRecordarme")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("FechaActualizacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("FechaExpiracion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
-
-                    b.Property<string>("Jti")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Ubicacion")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("UltimoAcceso")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAgent")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Activa");
-
-                    b.HasIndex("DispositivoId");
-
-                    b.HasIndex("EsRecordarme");
-
-                    b.HasIndex("FechaExpiracion");
-
-                    b.HasIndex("Jti")
-                        .IsUnique();
-
-                    b.HasIndex("RefreshToken")
-                        .IsUnique();
-
-                    b.HasIndex("UsuarioId");
-
-                    b.HasIndex("Activa", "FechaExpiracion");
-
-                    b.HasIndex("UsuarioId", "Activa");
-
-                    b.HasIndex("UsuarioId", "EsRecordarme");
-
-                    b.ToTable("Sesiones");
                 });
 
             modelBuilder.Entity("Sigav.Domain.Usuario", b =>
@@ -1267,35 +1089,6 @@ namespace Sigav.Api.Migrations
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("Sigav.Domain.RecuperacionContrasena", b =>
-                {
-                    b.HasOne("Sigav.Domain.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("Sigav.Domain.Sesion", b =>
-                {
-                    b.HasOne("Sigav.Domain.Dispositivo", "Dispositivo")
-                        .WithMany()
-                        .HasForeignKey("DispositivoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Sigav.Domain.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Dispositivo");
 
                     b.Navigation("Usuario");
                 });

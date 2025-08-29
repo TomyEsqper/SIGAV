@@ -20,6 +20,13 @@ public class SigavDbContext : DbContext
     public DbSet<ChecklistEjecucion> ChecklistEjecuciones { get; set; }
     public DbSet<ChecklistItemResultado> ChecklistItemResultados { get; set; }
     public DbSet<AuthLog> AuthLogs { get; set; }
+    
+    // Nuevos DbSets para seguridad
+    public DbSet<Dispositivo> Dispositivos { get; set; }
+    public DbSet<LogSeguridad> LogsSeguridad { get; set; }
+    public DbSet<IpBloqueada> IpsBloqueadas { get; set; }
+    public DbSet<Sesion> Sesiones { get; set; }
+    public DbSet<RecuperacionContrasena> RecuperacionesContrasena { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -238,6 +245,162 @@ public class SigavDbContext : DbContext
             entity.HasIndex(e => new { e.Tenant, e.Result });
             entity.HasIndex(e => new { e.IpAddress, e.Timestamp });
         });
+
+        // Configuración de Dispositivo
+        modelBuilder.Entity<Dispositivo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Tipo).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+            entity.Property(e => e.Ubicacion).HasMaxLength(100);
+            entity.Property(e => e.FechaRegistro).IsRequired();
+            entity.Property(e => e.UltimoAcceso).IsRequired();
+            entity.Property(e => e.EsConfiable).IsRequired();
+            entity.Property(e => e.Activo).IsRequired();
+            
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            // Índices para performance y consultas
+            entity.HasIndex(e => e.UsuarioId);
+            entity.HasIndex(e => e.IpAddress);
+            entity.HasIndex(e => e.EsConfiable);
+            entity.HasIndex(e => e.Activo);
+            entity.HasIndex(e => e.UltimoAcceso);
+            entity.HasIndex(e => new { e.UsuarioId, e.Activo });
+            entity.HasIndex(e => new { e.IpAddress, e.Activo });
+        });
+
+        // Configuración de LogSeguridad
+        modelBuilder.Entity<LogSeguridad>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Tenant).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.UsernameAttempted).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+            entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.TipoEvento).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Resultado).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Detalles).HasMaxLength(500);
+            entity.Property(e => e.Ubicacion).HasMaxLength(100);
+            entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.Jti).HasMaxLength(100);
+            
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.SetNull);
+                  
+            // Índices para auditoría y análisis
+            entity.HasIndex(e => e.Tenant);
+            entity.HasIndex(e => e.UsuarioId);
+            entity.HasIndex(e => e.IpAddress);
+            entity.HasIndex(e => e.TipoEvento);
+            entity.HasIndex(e => e.Resultado);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => new { e.Tenant, e.Timestamp });
+            entity.HasIndex(e => new { e.IpAddress, e.Timestamp });
+            entity.HasIndex(e => new { e.TipoEvento, e.Resultado });
+        });
+
+        // Configuración de IpBloqueada
+        modelBuilder.Entity<IpBloqueada>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+            entity.Property(e => e.Razon).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FechaBloqueo).IsRequired();
+            entity.Property(e => e.FechaExpiracion).IsRequired();
+            entity.Property(e => e.Detalles).HasMaxLength(500);
+            entity.Property(e => e.Activo).IsRequired();
+            entity.Property(e => e.IntentosFallidos).IsRequired();
+            
+            // Índices para performance y consultas
+            entity.HasIndex(e => e.IpAddress);
+            entity.HasIndex(e => e.Activo);
+            entity.HasIndex(e => e.FechaExpiracion);
+            entity.HasIndex(e => new { e.IpAddress, e.Activo });
+            entity.HasIndex(e => new { e.Activo, e.FechaExpiracion });
+        });
+
+        // Configuración de Sesion
+        modelBuilder.Entity<Sesion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Jti).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RefreshToken).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FechaCreacion).IsRequired();
+            entity.Property(e => e.FechaExpiracion).IsRequired();
+            entity.Property(e => e.UltimoAcceso).IsRequired();
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+            entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Ubicacion).HasMaxLength(100);
+            entity.Property(e => e.Tipo).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Activa).IsRequired();
+            entity.Property(e => e.EsRecordarme).IsRequired();
+            entity.Property(e => e.DispositivoId).HasMaxLength(100);
+            
+            entity.HasOne(e => e.Usuario)
+                  .WithMany()
+                  .HasForeignKey(e => e.UsuarioId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(e => e.Dispositivo)
+                  .WithMany()
+                  .HasForeignKey(e => e.DispositivoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+                  
+            // Índices para performance y consultas
+            entity.HasIndex(e => e.UsuarioId);
+            entity.HasIndex(e => e.Jti).IsUnique();
+            entity.HasIndex(e => e.RefreshToken).IsUnique();
+            entity.HasIndex(e => e.Activa);
+            entity.HasIndex(e => e.FechaExpiracion);
+            entity.HasIndex(e => e.EsRecordarme);
+            entity.HasIndex(e => new { e.UsuarioId, e.Activa });
+                         entity.HasIndex(e => new { e.UsuarioId, e.EsRecordarme });
+             entity.HasIndex(e => new { e.Activa, e.FechaExpiracion });
+         });
+
+         // Configuración de RecuperacionContrasena
+         modelBuilder.Entity<RecuperacionContrasena>(entity =>
+         {
+             entity.HasKey(e => e.Id);
+             entity.Property(e => e.Token).IsRequired().HasMaxLength(100);
+             entity.Property(e => e.CodigoRecuperacion).IsRequired().HasMaxLength(100);
+             entity.Property(e => e.FechaCreacion).IsRequired();
+             entity.Property(e => e.FechaExpiracion).IsRequired();
+             entity.Property(e => e.FechaUso);
+             entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+             entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+             entity.Property(e => e.Ubicacion).HasMaxLength(100);
+             entity.Property(e => e.Tipo).IsRequired().HasMaxLength(50);
+             entity.Property(e => e.Usado).IsRequired();
+             entity.Property(e => e.Activo).IsRequired();
+             
+             entity.HasOne(e => e.Usuario)
+                   .WithMany()
+                   .HasForeignKey(e => e.UsuarioId)
+                   .OnDelete(DeleteBehavior.Cascade);
+                   
+             // Índices para performance y consultas
+             entity.HasIndex(e => e.UsuarioId);
+             entity.HasIndex(e => e.Token).IsUnique();
+             entity.HasIndex(e => e.CodigoRecuperacion);
+             entity.HasIndex(e => e.Tipo);
+             entity.HasIndex(e => e.Usado);
+             entity.HasIndex(e => e.Activo);
+             entity.HasIndex(e => e.FechaExpiracion);
+             entity.HasIndex(e => new { e.UsuarioId, e.Activo });
+             entity.HasIndex(e => new { e.Token, e.Activo });
+             entity.HasIndex(e => new { e.CodigoRecuperacion, e.Activo });
+             entity.HasIndex(e => new { e.Tipo, e.Activo });
+             entity.HasIndex(e => new { e.Activo, e.FechaExpiracion });
+         });
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

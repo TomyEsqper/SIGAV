@@ -1,6 +1,8 @@
-<div class="login-container">
-  <!-- Left Section - Branding -->
-  <div class="branding-section">
+<app-smooth-transition type="fade" effect="none">
+  <div class="login-container">
+    <!-- Left Section - Branding -->
+    <app-smooth-transition type="slide" delay="200" effect="none">
+      <div class="branding-section">
     <div class="branding-content">
       <!-- Logo -->
       <div class="logo">🚌</div>
@@ -21,10 +23,12 @@
         © 2025 SIGAV. Todos los derechos reservados.
       </div>
     </div>
+  </app-smooth-transition>
   </div>
 
   <!-- Right Section - Login Form -->
-  <div class="login-section">
+  <app-smooth-transition type="slide-up" delay="400" effect="none">
+    <div class="login-section">
     <div class="login-content">
       <!-- Header -->
       <div class="login-header">
@@ -78,6 +82,8 @@
             placeholder="Contraseña"
             [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
             autocomplete="current-password"
+            (focus)="onPasswordFocus()"
+            (blur)="onPasswordBlur()"
           >
           <div class="error-message" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
             <span *ngIf="loginForm.get('password')?.hasError('required')">Contraseña es requerida</span>
@@ -86,13 +92,23 @@
           <button type="button" class="password-toggle" (click)="togglePassword()" [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
             {{ showPassword ? '👁️' : '👁️‍🗨️' }}
           </button>
+          
+          <!-- Password Strength Indicator -->
+          <app-smooth-transition type="fade" *ngIf="showPasswordStrength || formSubmitted">
+            <app-password-strength 
+              [password]="loginForm.get('password')?.value || ''"
+              *ngIf="loginForm.get('password')?.value">
+            </app-password-strength>
+          </app-smooth-transition>
         </div>
 
         <!-- Login Button -->
-        <button type="submit" class="login-button" [disabled]="loading">
-          <span *ngIf="!loading">Iniciar Sesión</span>
-          <span *ngIf="loading" class="loading-spinner">⏳</span>
-        </button>
+        <app-smooth-transition type="scale" effect="glow">
+          <button type="submit" class="login-button" [disabled]="loading">
+            <span *ngIf="!loading">Iniciar Sesión</span>
+            <app-loading-spinner *ngIf="loading" size="small" message="Iniciando sesión..."></app-loading-spinner>
+          </button>
+        </app-smooth-transition>
 
         <!-- Forgot Password -->
         <div class="forgot-password">
@@ -100,5 +116,6 @@
         </div>
       </form>
     </div>
+  </app-smooth-transition>
   </div>
-</div>
+</app-smooth-transition>

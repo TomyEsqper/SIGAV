@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Sigav.Api.Data;
@@ -11,9 +12,11 @@ using Sigav.Api.Data;
 namespace Sigav.Api.Migrations
 {
     [DbContext(typeof(SigavDbContext))]
-    partial class SigavDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250829005439_AddPasswordRecovery")]
+    partial class AddPasswordRecovery
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -622,8 +625,8 @@ namespace Sigav.Api.Migrations
 
                     b.Property<string>("UserAgent")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("integer");

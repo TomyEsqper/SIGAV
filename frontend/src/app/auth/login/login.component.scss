@@ -304,6 +304,89 @@ body, html {
   }
 }
 
+/* =========== Enhanced Animations =========== */
+.form-input {
+  &:focus {
+    border-bottom-color: #1a1a2e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 26, 46, 0.1);
+  }
+}
+
+.login-button {
+  &:hover:not(:disabled) {
+    background: #2a2a3e;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(26, 26, 46, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(26, 26, 46, 0.2);
+  }
+}
+
+.password-toggle {
+  &:hover {
+    color: #1a1a2e;
+    transform: scale(1.1);
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+.form-input,
+.login-button,
+.password-toggle,
+.forgot-link,
+.create-account-link {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading state animations */
+.login-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Form validation animations */
+.form-input.error {
+  border-bottom-color: #e74c3c;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Success state animations */
+.form-input:valid {
+  border-bottom-color: #28a745;
+}
+
+/* Focus animations */
+.form-group {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #1a1a2e;
+    transition: width 0.3s ease;
+  }
+  
+  &:focus-within::after {
+    width: 100%;
+  }
+}
+
 /* =========== Responsive Design =========== */
 @media (max-width: 1024px) {
   .branding-section {

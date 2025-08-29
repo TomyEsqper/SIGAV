@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Sigav.Api.Data;
+using Sigav.Api.Services;
 using Sigav.Domain;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -18,12 +20,18 @@ public class AuthController : ControllerBase
     private readonly SigavDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+    private readonly ISecurityService _securityService;
+    private readonly ISessionService _sessionService;
+    private readonly IPasswordRecoveryService _passwordRecoveryService;
 
-    public AuthController(SigavDbContext context, IConfiguration configuration, ILogger<AuthController> logger)
+    public AuthController(SigavDbContext context, IConfiguration configuration, ILogger<AuthController> logger, ISecurityService securityService, ISessionService sessionService, IPasswordRecoveryService passwordRecoveryService)
     {
         _context = context;
         _configuration = configuration;
         _logger = logger;
+        _securityService = securityService;
+        _sessionService = sessionService;
+        _passwordRecoveryService = passwordRecoveryService;
     }
 
     [HttpPost("login")]
@@ -31,9 +39,15 @@ public class AuthController : ControllerBase
     {
         try
         {
+            // Obtener información del cliente
+            var ipAddress = GetClientIpAddress();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+            var location = await GetLocationFromIp(ipAddress);
+
             // Validar request
             if (!ModelState.IsValid)
             {
+                await _securityService.LogSecurityEventAsync("unknown", request.UsernameOrEmail ?? "unknown", ipAddress, userAgent, "login_fallido", "fail", detalles: "Modelo inválido");
                 return BadRequest(new { message = "Credenciales inválidas" });
             }
 
@@ -43,7 +57,15 @@ public class AuthController : ControllerBase
 
             if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(usernameOrEmail) || string.IsNullOrEmpty(request.Password))
             {
+                await _securityService.LogSecurityEventAsync("unknown", usernameOrEmail ?? "unknown", ipAddress, userAgent, "login_fallido", "fail", detalles: "Campos vacíos");
                 return BadRequest(new { message = "Credenciales inválidas" });
+            }
+
+            // Verificar si la IP está bloqueada
+            if (await _securityService.IsIpBlockedAsync(ipAddress))
+            {
+                await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_fallido", "blocked", detalles: "IP bloqueada");
+                return StatusCode(423, new { message = "Acceso bloqueado temporalmente" });
             }
 
             // Buscar tenant
@@ -55,6 +77,7 @@ public class AuthController : ControllerBase
 
             if (empresa == null)
             {
+                await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_fallido", "fail", detalles: "Tenant inválido");
                 _logger.LogWarning("Login attempt with invalid tenant: {Tenant}", tenant);
                 return BadRequest(new { message = "Credenciales inválidas" });
             }
@@ -70,6 +93,7 @@ public class AuthController : ControllerBase
 
             if (usuario == null)
             {
+                await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_fallido", "fail", detalles: "Usuario no encontrado");
                 _logger.LogWarning("Login attempt with invalid credentials for tenant: {Tenant}, username: {Username}", tenant, usernameOrEmail);
                 return BadRequest(new { message = "Credenciales inválidas" });
             }
@@ -77,6 +101,7 @@ public class AuthController : ControllerBase
             // Verificar si la cuenta está bloqueada
             if (usuario.FailedAttempts >= 5 && usuario.LockedUntil.HasValue && usuario.LockedUntil > DateTime.UtcNow)
             {
+                await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_fallido", "blocked", usuario.Id, detalles: "Cuenta bloqueada");
                 _logger.LogWarning("Login attempt for locked account: {UserId}", usuario.Id);
                 return StatusCode(423, new { message = "Cuenta bloqueada temporalmente" });
             }
@@ -89,9 +114,16 @@ public class AuthController : ControllerBase
                 if (usuario.FailedAttempts >= 5)
                 {
                     usuario.LockedUntil = DateTime.UtcNow.AddMinutes(15);
+                    
+                    // Bloquear IP si hay muchos intentos fallidos
+                    if (usuario.FailedAttempts >= 10)
+                    {
+                        await _securityService.BlockIpAsync(ipAddress, "Múltiples intentos fallidos de login", 30);
+                    }
                 }
                 await _context.SaveChangesAsync();
 
+                await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_fallido", "fail", usuario.Id, detalles: $"Intento {usuario.FailedAttempts}");
                 _logger.LogWarning("Failed login attempt for user: {UserId}", usuario.Id);
                 return BadRequest(new { message = "Credenciales inválidas" });
             }
@@ -102,26 +134,69 @@ public class AuthController : ControllerBase
             usuario.LastLoginAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
+            // Manejar dispositivos
+            var existingDevice = await _securityService.GetDeviceAsync(usuario.Id, userAgent, ipAddress);
+            var isNewDevice = existingDevice == null;
+            var isTrustedDevice = false;
+
+            if (existingDevice != null)
+            {
+                await _securityService.UpdateDeviceLastAccessAsync(existingDevice.Id);
+                isTrustedDevice = existingDevice.EsConfiable;
+            }
+            else
+            {
+                existingDevice = await _securityService.RegisterDeviceAsync(usuario.Id, userAgent, ipAddress, location);
+                
+                // Enviar notificación de nuevo dispositivo
+                await _securityService.SendNewDeviceNotificationAsync(usuario, existingDevice);
+            }
+
             // Generar JWT
             var token = GenerateJwtToken(usuario, empresa);
 
-            // Log de auditoría
-            await LogAuthAttempt(tenant, usuario.Id, usernameOrEmail, true, token.Id);
+            // Generar refresh token
+            var refreshToken = GenerateRefreshToken();
 
-            _logger.LogInformation("Successful login for user: {UserId} in tenant: {Tenant}", usuario.Id, tenant);
+            // Crear sesión
+            var session = await _sessionService.CreateSessionAsync(
+                usuario.Id, 
+                token.Id, 
+                refreshToken, 
+                ipAddress, 
+                userAgent, 
+                location ?? "Desconocida", 
+                request.RememberMe,
+                existingDevice?.Id.ToString()
+            );
+
+            // Log de auditoría
+            await _securityService.LogSecurityEventAsync(tenant, usernameOrEmail, ipAddress, userAgent, "login_exitoso", "ok", usuario.Id, jti: token.Id, ubicacion: location);
+
+            // Enviar notificación de login si es dispositivo no confiable
+            if (!isTrustedDevice)
+            {
+                await _securityService.SendLoginNotificationAsync(usuario, ipAddress, userAgent, location);
+            }
+
+            _logger.LogInformation("Successful login for user: {UserId} in tenant: {Tenant} from {IpAddress}", usuario.Id, tenant, ipAddress);
 
             return Ok(new LoginResponse
             {
                 AccessToken = token.Token,
                 ExpiresIn = 900, // 15 minutos
                 TokenType = "Bearer",
+                RefreshToken = refreshToken,
                 User = new UserInfo
                 {
                     Id = usuario.Id.ToString(),
                     Name = $"{usuario.Nombre} {usuario.Apellido}",
                     Email = usuario.Email
                 },
-                Tenant = tenant
+                Tenant = tenant,
+                IsNewDevice = isNewDevice,
+                DeviceName = existingDevice?.Nombre,
+                RememberMe = request.RememberMe
             });
         }
         catch (Exception ex)
@@ -184,6 +259,14 @@ public class AuthController : ControllerBase
         return (tokenString, jti);
     }
 
+    private string GenerateRefreshToken()
+    {
+        var randomBytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes);
+    }
+
     private async Task LogAuthAttempt(string tenant, int? userId, string usernameAttempted, bool success, string? jti = null)
     {
         try
@@ -208,6 +291,459 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Error logging auth attempt");
         }
     }
+
+    private string GetClientIpAddress()
+    {
+        // Obtener IP real considerando proxies
+        var forwardedHeader = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedHeader))
+        {
+            return forwardedHeader.Split(',')[0].Trim();
+        }
+
+        var realIpHeader = Request.Headers["X-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(realIpHeader))
+        {
+            return realIpHeader;
+        }
+
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    }
+
+    private async Task<string?> GetLocationFromIp(string ipAddress)
+    {
+        try
+        {
+            // En una implementación real, aquí harías una llamada a un servicio de geolocalización
+            // Por ahora, simulamos la ubicación basada en IPs locales
+            if (ipAddress == "127.0.0.1" || ipAddress == "::1" || ipAddress.StartsWith("192.168.") || ipAddress.StartsWith("10."))
+            {
+                return "Local";
+            }
+
+            // TODO: Implementar llamada real a servicio de geolocalización
+            // Ejemplo: https://ipapi.co/{ip}/json/
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting location for IP: {IpAddress}", ipAddress);
+            return null;
+        }
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new { message = "Refresh token requerido" });
+            }
+
+            var session = await _sessionService.GetSessionByRefreshTokenAsync(request.RefreshToken);
+            if (session == null || !session.Activa)
+            {
+                return BadRequest(new { message = "Refresh token inválido o expirado" });
+            }
+
+            // Verificar que la sesión no haya expirado
+            if (session.FechaExpiracion < DateTime.UtcNow)
+            {
+                return BadRequest(new { message = "Sesión expirada" });
+            }
+
+            // Generar nuevo JWT
+            var empresa = await _context.Empresas.FindAsync(session.Usuario.EmpresaId);
+            if (empresa == null)
+            {
+                return BadRequest(new { message = "Empresa no encontrada" });
+            }
+
+            var newToken = GenerateJwtToken(session.Usuario, empresa);
+            
+            // Actualizar la sesión con el nuevo JTI
+            session.Jti = newToken.Id;
+            session.UltimoAcceso = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new RefreshTokenResponse
+            {
+                AccessToken = newToken.Token,
+                ExpiresIn = 900,
+                TokenType = "Bearer"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing token");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(request.Jti))
+            {
+                await _sessionService.RevokeSessionAsync(request.Jti);
+            }
+
+            return Ok(new { message = "Sesión cerrada correctamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during logout");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpGet("sessions")]
+    [Authorize]
+    public async Task<IActionResult> GetActiveSessions()
+    {
+        try
+        {
+            // Debug: Log all claims
+            _logger.LogInformation("User claims: {Claims}", string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
+            
+            // Obtener el usuario del token JWT
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                _logger.LogWarning("Invalid token - userIdClaim: {UserIdClaim}", userIdClaim);
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var sessions = await _sessionService.GetActiveSessionsAsync(userId);
+            
+            var sessionResponses = sessions.Select(s => new SessionInfo
+            {
+                Id = s.Id,
+                Jti = s.Jti,
+                IpAddress = s.IpAddress,
+                UserAgent = s.UserAgent,
+                Ubicacion = s.Ubicacion,
+                Tipo = s.Tipo,
+                EsRecordarme = s.EsRecordarme,
+                FechaCreacion = s.FechaCreacion,
+                UltimoAcceso = s.UltimoAcceso,
+                FechaExpiracion = s.FechaExpiracion,
+                DispositivoNombre = s.Dispositivo?.Nombre
+            }).ToList();
+
+            return Ok(new { sessions = sessionResponses });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting active sessions");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("sessions/{jti}/revoke")]
+    public async Task<IActionResult> RevokeSession(string jti)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var session = await _sessionService.GetSessionByJtiAsync(jti);
+            if (session == null || session.UsuarioId != userId)
+            {
+                return NotFound(new { message = "Sesión no encontrada" });
+            }
+
+            var revoked = await _sessionService.RevokeSessionAsync(jti);
+            if (revoked)
+            {
+                return Ok(new { message = "Sesión revocada correctamente" });
+            }
+
+            return BadRequest(new { message = "No se pudo revocar la sesión" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error revoking session");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpGet("test-auth")]
+    public IActionResult TestAuth()
+    {
+        return Ok(new { message = "API funcionando correctamente" });
+    }
+
+    [HttpPost("sessions/revoke-all-except-current")]
+    public async Task<IActionResult> RevokeAllSessionsExceptCurrent()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            var currentJti = User.FindFirst("jti")?.Value;
+            
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            if (string.IsNullOrEmpty(currentJti))
+            {
+                return BadRequest(new { message = "JTI actual no encontrado" });
+            }
+
+            var revoked = await _sessionService.RevokeAllSessionsExceptAsync(userId, currentJti);
+            
+            return Ok(new { 
+                message = "Sesiones revocadas correctamente",
+                sessionsRevoked = revoked
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error revoking all sessions except current");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Datos inválidos" });
+            }
+
+            var ipAddress = GetClientIpAddress();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+            var location = await GetLocationFromIp(ipAddress);
+
+            var success = await _passwordRecoveryService.RequestPasswordResetAsync(
+                request.Tenant, 
+                request.Email, 
+                ipAddress, 
+                userAgent, 
+                location
+            );
+
+            if (success)
+            {
+                return Ok(new { message = "Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña" });
+            }
+            else
+            {
+                // Por seguridad, siempre devolver el mismo mensaje
+                return Ok(new { message = "Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in forgot password request");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("validate-reset-token")]
+    public async Task<IActionResult> ValidateResetToken([FromBody] ValidateResetTokenRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.Token))
+            {
+                return BadRequest(new { message = "Token requerido" });
+            }
+
+            var isValid = await _passwordRecoveryService.ValidateResetTokenAsync(request.Token);
+
+            if (isValid)
+            {
+                return Ok(new { message = "Token válido" });
+            }
+            else
+            {
+                return BadRequest(new { message = "Token inválido o expirado" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating reset token");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("validate-recovery-code")]
+    public async Task<IActionResult> ValidateRecoveryCode([FromBody] ValidateRecoveryCodeRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.Code))
+            {
+                return BadRequest(new { message = "Código requerido" });
+            }
+
+            var isValid = await _passwordRecoveryService.ValidateRecoveryCodeAsync(request.Code);
+
+            if (isValid)
+            {
+                return Ok(new { message = "Código válido" });
+            }
+            else
+            {
+                return BadRequest(new { message = "Código inválido o expirado" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating recovery code");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("reset-password-token")]
+    public async Task<IActionResult> ResetPasswordWithToken([FromBody] ResetPasswordTokenRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Datos inválidos" });
+            }
+
+            var ipAddress = GetClientIpAddress();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
+            var success = await _passwordRecoveryService.ResetPasswordWithTokenAsync(
+                request.Token, 
+                request.NewPassword, 
+                ipAddress, 
+                userAgent
+            );
+
+            if (success)
+            {
+                return Ok(new { message = "Contraseña restablecida correctamente" });
+            }
+            else
+            {
+                return BadRequest(new { message = "Token inválido o expirado" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password with token");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("reset-password-code")]
+    public async Task<IActionResult> ResetPasswordWithCode([FromBody] ResetPasswordCodeRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Datos inválidos" });
+            }
+
+            var ipAddress = GetClientIpAddress();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
+            var success = await _passwordRecoveryService.ResetPasswordWithCodeAsync(
+                request.Code, 
+                request.NewPassword, 
+                ipAddress, 
+                userAgent
+            );
+
+            if (success)
+            {
+                return Ok(new { message = "Contraseña restablecida correctamente" });
+            }
+            else
+            {
+                return BadRequest(new { message = "Código inválido o expirado" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password with code");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("generate-emergency-codes")]
+    [Authorize]
+    public async Task<IActionResult> GenerateEmergencyCodes()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var ipAddress = GetClientIpAddress();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
+            var success = await _passwordRecoveryService.GenerateEmergencyCodesAsync(userId, ipAddress, userAgent);
+
+            if (success)
+            {
+                var codes = await _passwordRecoveryService.GetEmergencyCodesAsync(userId);
+                return Ok(new { 
+                    message = "Códigos de emergencia generados correctamente",
+                    codes = codes
+                });
+            }
+            else
+            {
+                return BadRequest(new { message = "Error generando códigos de emergencia" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating emergency codes");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpGet("emergency-codes")]
+    [Authorize]
+    public async Task<IActionResult> GetEmergencyCodes()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var codes = await _passwordRecoveryService.GetEmergencyCodesAsync(userId);
+
+            return Ok(new { 
+                codes = codes,
+                count = codes.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting emergency codes");
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
 }
 
 public class LoginRequest
@@ -220,6 +756,8 @@ public class LoginRequest
     
     [Required]
     public string Password { get; set; } = string.Empty;
+    
+    public bool RememberMe { get; set; } = false;
 }
 
 public class LoginResponse
@@ -227,8 +765,12 @@ public class LoginResponse
     public string AccessToken { get; set; } = string.Empty;
     public int ExpiresIn { get; set; }
     public string TokenType { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
     public UserInfo User { get; set; } = new();
     public string Tenant { get; set; } = string.Empty;
+    public bool IsNewDevice { get; set; } = false;
+    public string? DeviceName { get; set; }
+    public bool RememberMe { get; set; } = false;
 }
 
 public class UserInfo
@@ -236,6 +778,82 @@ public class UserInfo
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+}
+
+public class RefreshTokenRequest
+{
+    [Required]
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class RefreshTokenResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
+    public string TokenType { get; set; } = string.Empty;
+}
+
+public class LogoutRequest
+{
+    [Required]
+    public string Jti { get; set; } = string.Empty;
+}
+
+public class SessionInfo
+{
+    public int Id { get; set; }
+    public string Jti { get; set; } = string.Empty;
+    public string IpAddress { get; set; } = string.Empty;
+    public string UserAgent { get; set; } = string.Empty;
+    public string Ubicacion { get; set; } = string.Empty;
+    public string Tipo { get; set; } = string.Empty;
+    public bool EsRecordarme { get; set; }
+    public DateTime FechaCreacion { get; set; }
+    public DateTime UltimoAcceso { get; set; }
+    public DateTime FechaExpiracion { get; set; }
+    public string? DispositivoNombre { get; set; }
+}
+
+public class ForgotPasswordRequest
+{
+    [Required]
+    public string Tenant { get; set; } = string.Empty;
+    
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ValidateResetTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+}
+
+public class ValidateRecoveryCodeRequest
+{
+    [Required]
+    public string Code { get; set; } = string.Empty;
+}
+
+public class ResetPasswordTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+    
+    [Required]
+    [MinLength(8)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class ResetPasswordCodeRequest
+{
+    [Required]
+    public string Code { get; set; } = string.Empty;
+    
+    [Required]
+    [MinLength(8)]
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 

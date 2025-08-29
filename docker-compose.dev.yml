@@ -64,7 +64,6 @@ services:
     container_name: sigav-frontend-dev
     ports:
       - "4200:4200"
-      - "49153:49153"  # Puerto para live-reload
     volumes:
       # Montamos el código fuente para hot-reload
       - ./frontend:/app

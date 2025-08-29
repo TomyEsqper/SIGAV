@@ -10,6 +10,8 @@ export interface LoginResponse {
   tokenType: string;
   user: UserInfo;
   tenant: string;
+  isNewDevice?: boolean;
+  deviceName?: string;
 }
 
 export interface UserInfo {
