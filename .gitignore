@@ -1,0 +1,150 @@
+# Archivos de configuración sensibles
+config/env.php
+config/database.php
+.env
+.env.local
+.env.*.local
+
+# Dependencias de Composer
+/vendor/
+composer.lock
+
+# Archivos IDE y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+.eclipseproject
+.settings/
+
+# Archivos del sistema operativo
+.DS_Store
+Desktop.ini
+desktop.ini
+Thumbs.db
+
+# Node modules (si se usa frontend con npm/yarn)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Directorios de carga y temporales
+/uploads/
+/storage/
+/tmp/
+/temp/
+
+# Archivos de sesión y caché
+/cache/
+*.cache
+session_*
+sessions/
+
+# Logs
+*.log
+logs/
+*.out
+
+# Archivos compilados y generados
+*.pyc
+__pycache__/
+*.pyo
+dist/
+build/
+
+# Directorios específicos del proyecto
+/uploads/documentos/*
+!/uploads/documentos/.gitkeep
+/uploads/evasion/*
+!/uploads/evasion/.gitkeep
+/uploads/evidencias/alistamientos/*
+!/uploads/evidencias/alistamientos/.gitkeep
+/uploads/evidencias/camaras/*
+!/uploads/evidencias/camaras/.gitkeep
+/uploads/fotos/*
+!/uploads/fotos/.gitkeep
+/uploads/tmp_evasion/*
+!/uploads/tmp_evasion/.gitkeep
+/uploads/tmp_wizard/*
+!/uploads/tmp_wizard/.gitkeep
+/storage/envios/*
+!/storage/envios/.gitkeep
+
+# Archivos QR generados
+/assets/qr/*
+!/assets/qr/.gitkeep
+/admin/qr/*
+!/admin/qr/.gitkeep
+
+# Archivos binarios (ffmpeg)
+/bin/ffmpeg_extracted/
+bin_build/
+
+# PDFs generados
+*.pdf
+
+# Archivos de base de datos
+*.sql
+!vehicles.sql
+!database/sigavv_database.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de prueba y desarrollo
+test_output/
+debug.php
+debug_*.php
+test_*.php
+tmp_*.php
+
+# Migraciones de desarrollo (mantener solo las versiones finales)
+/migraciones/backup/
+/migraciones/*.backup
+
+# Scripts de desarrollo
+/scripts/debug_*
+/scripts/test_*
+
+# Archivos de editor de texto
+*.bak
+*.tmp
+*.swp
+.editorconfig.local
+
+# Archivos de configuración de servidor web
+.htaccess.local
+.htaccess.backup
+
+# Verificadores y exports temporales
+verificar_*.php.bak
+check_*.php.bak
+formatoreporte.py.bak
+
+# Archivos de documentación local (no commiteada)
+docs/local/
+docs/private/
+NOTAS_LOCALES.md
+TODO_LOCAL.md
+
+# Directorios de respaldo
+backup/
+backups/
+.backup/
+
+# Archivos compilados de Python
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Cualquier archivo que comience con guión bajo (archivos ocultos personalizados)
+._*

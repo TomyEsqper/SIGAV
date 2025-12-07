@@ -1,0 +1,161 @@
+/* Estilos globales Admin – paleta azul seria, funcional y elegante */
+
+:root {
+  /* Paleta principal (azules) */
+  --brand-900: #0b1e3f;  /* azul profundo/navy */
+  --brand-800: #102a56;
+  --brand-700: #163a7a;
+  --brand-600: #1d4ed8;  /* royal blue */
+  --brand-500: #2563eb;
+  --brand-400: #3b82f6;
+  --brand-300: #60a5fa;
+  --brand-200: #93c5fd;
+  --brand-100: #dbeafe;
+  --brand-50:  #eff6ff;
+
+  /* Neutros y superficies */
+  --text-strong: #0f172a;  /* slate 900 */
+  --text-muted: #64748b;   /* slate 500 */
+  --surface:     #f8fafc;  /* slate 50 */
+  --card:        #ffffff;
+  --border:      #e2e8f0;
+  --shadow:      0 8px 24px rgba(8, 29, 58, 0.12);
+
+  /* Estados semánticos */
+  --ok:    #22c55e;  /* green 500 */
+  --warn:  #f59e0b;  /* amber 500 */
+  --bad:   #ef4444;  /* red 500 */
+  --info:  #2563eb;  /* blue 600 */
+}
+
+/* Base */
+body {
+  background: var(--surface);
+  color: var(--text-strong);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Cuerpo con navbar fijo */
+.with-navbar {
+  padding-top: 64px; /* altura aproximada del navbar fijo */
+}
+
+/* Logo en marcas */
+.navbar-logo {
+  height: 28px;
+  width: auto;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.sidebar-logo {
+  height: 40px;
+  width: auto;
+}
+
+/* Navbar fijo azul elegante */
+.navbar-blue {
+  background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-600) 100%);
+  box-shadow: 0 8px 18px rgba(8, 29, 58, 0.25);
+}
+.navbar-blue .nav-link { color: rgba(255,255,255,0.85); }
+.navbar-blue .nav-link:hover,
+.navbar-blue .nav-link.active { color: #fff; }
+
+/* Sidebar estándar */
+.sidebar {
+  background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-600) 100%);
+  min-height: 100vh;
+}
+.sidebar .nav-link {
+  color: rgba(255,255,255,0.88);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 4px 10px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.sidebar .nav-link:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.sidebar .nav-link.active {
+  background-color: var(--brand-500);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset;
+}
+
+/* Tarjetas y paneles */
+.stat-card,
+.table-card,
+.photo-card {
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.stat-card { padding: 22px; }
+.table-card { padding: 16px; }
+.photo-card { overflow: hidden; }
+
+.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card .stat-label { font-size: 1rem; color: var(--text-muted); }
+
+.photo-card img { width: 100%; height: 190px; object-fit: cover; display: block; }
+.photo-card .photo-body { padding: 12px 14px; }
+.photo-card .photo-title { font-size: 1rem; font-weight: 600; }
+.photo-card .photo-meta { font-size: 0.88rem; color: var(--text-muted); }
+
+/* Badges y estados */
+.badge-ok { background-color: var(--ok); color: #fff; }
+.badge-malo { background-color: var(--bad); color: #fff; }
+.badge-secundario { background-color: var(--brand-600); color: #fff; }
+
+.estado-ok { background: var(--ok); color: #fff; }
+.estado-malo { background: var(--bad); color: #fff; }
+.estado-vital { background: var(--warn); color: #1f2937; }
+
+/* Botones primarios */
+.btn-primary { background-color: var(--brand-600); border-color: var(--brand-600); }
+.btn-primary { box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25); }
+.btn-primary:hover,
+.btn-primary:focus { background-color: var(--brand-700); border-color: var(--brand-700); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-outline-primary { color: var(--brand-700); border-color: var(--brand-300); }
+.btn-outline-primary:hover { color: #fff; background-color: var(--brand-600); border-color: var(--brand-600); }
+.btn-outline-secondary { color: var(--brand-700); border-color: var(--brand-300); }
+.btn-outline-secondary:hover { color: #fff; background-color: var(--brand-600); border-color: var(--brand-600); }
+
+/* Utilidades */
+.text-muted-sm { color: var(--text-muted); font-size: 0.95rem; }
+.shadow-soft { box-shadow: var(--shadow); }
+.section-title { font-size: 1.25rem; font-weight: 600; color: var(--brand-800); }
+.divider { height: 1px; background: var(--border); margin: 10px 0 18px 0; }
+
+/* Realces sutiles en tarjetas (post-login) */
+.stat-card,
+.table-card,
+.photo-card {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.stat-card:hover,
+.table-card:hover,
+.photo-card:hover {
+  box-shadow: 0 12px 28px rgba(8, 29, 58, 0.16);
+  transform: translateY(-1px);
+}
+
+/* Tablas más legibles */
+.table thead th {
+  background: var(--brand-50);
+  color: var(--brand-800);
+  border-bottom: 2px solid var(--border);
+}
+.table tbody tr:hover {
+  background: #f9fbff;
+}
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(219, 234, 254, 0.4);
+}
+
+/* Áreas de contenido (sin tocar el sidebar) */
+.main-content,
+.content,
+.container-fluid {
+  color: var(--text-strong);
+}

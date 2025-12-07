@@ -1,0 +1,95 @@
+{
+  "name": "SIGAV Inspector",
+  "short_name": "SIGAV",
+  "description": "Sistema de Gestión y Alistamiento de Vehículos - Módulo Inspector",
+  "start_url": "/inspector/",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "assets/icons/icon-144x144.svg",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icons/icon-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshots/mobile-dashboard.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard del Inspector"
+    },
+    {
+      "src": "assets/screenshots/mobile-qr-scanner.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Escáner QR"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Escanear QR",
+      "short_name": "QR",
+      "description": "Escanear código QR de vehículo",
+      "url": "/inspector/?action=qr",
+      "icons": [
+        {
+          "src": "assets/icons/qr-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Búsqueda Manual",
+      "short_name": "Buscar",
+      "description": "Buscar vehículo por número interno",
+      "url": "/inspector/?action=search",
+      "icons": [
+        {
+          "src": "assets/icons/search-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Cámaras",
+      "short_name": "Cámaras",
+      "description": "Ir al módulo Inspector de Cámaras",
+      "url": "/inspector/camaras/",
+      "icons": [
+        {
+          "src": "assets/icons/camera-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
+}
